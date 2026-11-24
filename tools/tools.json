@@ -1,0 +1,277 @@
+[
+  {
+    "name": "funnel_check",
+    "description": "Проверяет файл воронки перед расчётом: дедуплицирует по ключу неделя+платформа+категория+регион, проверяет полноту сетки, нули, пропуски и монотонность всех четырёх переходов. Возвращает число удалённых дублей, список нарушений и набор проверок.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "csv_path": {
+          "type": "string",
+          "description": "Путь к CSV с недельной воронкой."
+        }
+      },
+      "required": [
+        "csv_path"
+      ]
+    }
+  },
+  {
+    "name": "funnel_periods",
+    "description": "Размечает недели по базовому и текущему периоду и считает воронку: суммы счётчиков, четыре этапных CVR, сквозную конверсию с 95% интервалом Уилсона и Δ между периодами. Отказывает, если периоды пересекаются, есть разрыв или граница режет неделю.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "csv_path": {
+          "type": "string",
+          "description": "Путь к CSV с недельной воронкой."
+        },
+        "base_start": {
+          "type": "string",
+          "description": "Первый день базового периода, YYYY-MM-DD (должен быть понедельником)."
+        },
+        "base_end": {
+          "type": "string",
+          "description": "Последний день базового периода, YYYY-MM-DD (должен быть воскресеньем)."
+        },
+        "current_start": {
+          "type": "string",
+          "description": "Первый день текущего периода, YYYY-MM-DD (понедельник, следующий за base_end)."
+        },
+        "current_end": {
+          "type": "string",
+          "description": "Последний день текущего периода, YYYY-MM-DD (воскресенье)."
+        }
+      },
+      "required": [
+        "csv_path",
+        "base_start",
+        "base_end",
+        "current_start",
+        "current_end"
+      ]
+    }
+  },
+  {
+    "name": "funnel_decompose",
+    "description": "Раскладывает изменение сквозной конверсии по четырём переходам: Δ в п.п., лог-вклад и доля вклада в процентах. Проверяет, что произведение этапных CVR равно общей конверсии, а сумма вкладов — изменению общей конверсии.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "csv_path": {
+          "type": "string",
+          "description": "Путь к CSV с недельной воронкой."
+        },
+        "base_start": {
+          "type": "string",
+          "description": "Первый день базового периода, YYYY-MM-DD (должен быть понедельником)."
+        },
+        "base_end": {
+          "type": "string",
+          "description": "Последний день базового периода, YYYY-MM-DD (должен быть воскресеньем)."
+        },
+        "current_start": {
+          "type": "string",
+          "description": "Первый день текущего периода, YYYY-MM-DD (понедельник, следующий за base_end)."
+        },
+        "current_end": {
+          "type": "string",
+          "description": "Последний день текущего периода, YYYY-MM-DD (воскресенье)."
+        }
+      },
+      "required": [
+        "csv_path",
+        "base_start",
+        "base_end",
+        "current_start",
+        "current_end"
+      ]
+    }
+  },
+  {
+    "name": "funnel_segments",
+    "description": "Считает конверсию, Δ и вклад в общее изменение по сегментам. Дополнительно раскладывает Δ на rate/mix/interaction, чтобы отделить изменение поведения от сдвига трафика. Возвращает визиты-знаменатели и этапные Δ внутри каждого сегмента.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "csv_path": {
+          "type": "string",
+          "description": "Путь к CSV с недельной воронкой."
+        },
+        "base_start": {
+          "type": "string",
+          "description": "Первый день базового периода, YYYY-MM-DD (должен быть понедельником)."
+        },
+        "base_end": {
+          "type": "string",
+          "description": "Последний день базового периода, YYYY-MM-DD (должен быть воскресеньем)."
+        },
+        "current_start": {
+          "type": "string",
+          "description": "Первый день текущего периода, YYYY-MM-DD (понедельник, следующий за base_end)."
+        },
+        "current_end": {
+          "type": "string",
+          "description": "Последний день текущего периода, YYYY-MM-DD (воскресенье)."
+        },
+        "by": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "enum": [
+              "platform",
+              "category",
+              "region_type"
+            ]
+          },
+          "description": "Измерения сегментации; одна или несколько колонок."
+        }
+      },
+      "required": [
+        "csv_path",
+        "base_start",
+        "base_end",
+        "current_start",
+        "current_end",
+        "by"
+      ]
+    }
+  },
+  {
+    "name": "funnel_weekly",
+    "description": "Строит недельную динамику сквозной конверсии и этапных переходов по платформам, находит неделю максимального перелома и проверяет дату начала эффекта: сравнивает наблюдаемую неделю с ожидаемой при старте события в указанную дату и оценивает, какую долю недели захватил эффект.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "csv_path": {
+          "type": "string",
+          "description": "Путь к CSV с недельной воронкой."
+        },
+        "base_start": {
+          "type": "string",
+          "description": "Первый день базового периода, YYYY-MM-DD (должен быть понедельником)."
+        },
+        "base_end": {
+          "type": "string",
+          "description": "Последний день базового периода, YYYY-MM-DD (должен быть воскресеньем)."
+        },
+        "current_start": {
+          "type": "string",
+          "description": "Первый день текущего периода, YYYY-MM-DD (понедельник, следующий за base_end)."
+        },
+        "current_end": {
+          "type": "string",
+          "description": "Последний день текущего периода, YYYY-MM-DD (воскресенье)."
+        },
+        "platform": {
+          "type": "string",
+          "description": "Ограничить расчёт одной платформой; по умолчанию все."
+        },
+        "event_date": {
+          "type": "string",
+          "description": "Дата события из журнала изменений, YYYY-MM-DD. Без неё onset-тест не считается."
+        }
+      },
+      "required": [
+        "csv_path",
+        "base_start",
+        "base_end",
+        "current_start",
+        "current_end"
+      ]
+    }
+  },
+  {
+    "name": "funnel_events",
+    "description": "Сопоставляет журнал изменений с данными: для каждого события считает спад в его scope против остальных платформ, указывает этап с максимальным падением и выносит эвристический вердикт. Совпадение по времени не считается доказательством причинности.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "csv_path": {
+          "type": "string",
+          "description": "Путь к CSV с недельной воронкой."
+        },
+        "base_start": {
+          "type": "string",
+          "description": "Первый день базового периода, YYYY-MM-DD (должен быть понедельником)."
+        },
+        "base_end": {
+          "type": "string",
+          "description": "Последний день базового периода, YYYY-MM-DD (должен быть воскресеньем)."
+        },
+        "current_start": {
+          "type": "string",
+          "description": "Первый день текущего периода, YYYY-MM-DD (понедельник, следующий за base_end)."
+        },
+        "current_end": {
+          "type": "string",
+          "description": "Последний день текущего периода, YYYY-MM-DD (воскресенье)."
+        },
+        "change_log_path": {
+          "type": "string",
+          "description": "Путь к CSV с журналом изменений."
+        }
+      },
+      "required": [
+        "csv_path",
+        "base_start",
+        "base_end",
+        "current_start",
+        "current_end",
+        "change_log_path"
+      ]
+    }
+  },
+  {
+    "name": "analyze_funnel",
+    "description": "Агрегирующий инструмент с исходной схемой ответа: meta, base_period, current_period, delta_pp, stage_contribution, segments, weekly_dynamics, all_changes, plot_path, data_quality. Проверяет ключ и периоды, считает дедуплицированные агрегаты, сдвиг трафика по визитам и onset-тест. Используй его, когда нужен один вызов и полная картина.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "csv_path": {
+          "type": "string",
+          "description": "Путь к CSV с недельной воронкой."
+        },
+        "base_start": {
+          "type": "string",
+          "description": "Первый день базового периода, YYYY-MM-DD (должен быть понедельником)."
+        },
+        "base_end": {
+          "type": "string",
+          "description": "Последний день базового периода, YYYY-MM-DD (должен быть воскресеньем)."
+        },
+        "current_start": {
+          "type": "string",
+          "description": "Первый день текущего периода, YYYY-MM-DD (понедельник, следующий за base_end)."
+        },
+        "current_end": {
+          "type": "string",
+          "description": "Последний день текущего периода, YYYY-MM-DD (воскресенье)."
+        },
+        "change_log_path": {
+          "type": "string",
+          "description": "Путь к CSV с журналом изменений."
+        },
+        "group_by": {
+          "type": "string",
+          "enum": [
+            "platform",
+            "category",
+            "region_type"
+          ],
+          "description": "Измерение сегментации для блока segments; по умолчанию platform."
+        },
+        "event_date": {
+          "type": "string",
+          "description": "Дата события для onset-теста, YYYY-MM-DD."
+        }
+      },
+      "required": [
+        "csv_path",
+        "base_start",
+        "base_end",
+        "current_start",
+        "current_end"
+      ]
+    }
+  }
+]
